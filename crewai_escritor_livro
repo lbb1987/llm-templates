@@ -1,0 +1,98 @@
+import os
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import SerperDevTool
+
+# Configuração das chaves da API
+os.environ["SERPER_API_KEY"] = "sua_chave"
+os.environ["OPENAI_API_KEY"] = "sua_chave"
+
+# Instancia a ferramenta de pesquisa
+search_tool = SerperDevTool(n_results=30)
+
+# 🔎 Agente Pesquisador
+pesquisador = Agent(
+    role="Especialista em Pesquisa",
+    goal="Identificar os 10 subtemas mais relevantes sobre {tema}",
+    backstory="Pesquisador experiente, encontra e organiza conhecimento de forma clara.",
+    tools=[search_tool],
+    verbose=True,
+    memory=True
+)
+
+# 📖 Agente Planejador
+planejador = Agent(
+    role="Estrategista de Conteúdo",
+    goal="Criar um esqueleto detalhado do livro",
+    backstory="Especialista em estruturação de conteúdo e progressão lógica.",
+    verbose=True,
+    memory=True
+)
+
+# ✍️ Agente Escritor
+escritor = Agent(
+    role="Escritor Profissional",
+    goal="Especialista em escrever um livro completo sobre o tema {tema} baseado na estrutura definida",
+    backstory="Transforma conhecimento complexo sobre o tema {tema} em um material profundo, fluido e bem formatado.",
+    verbose=True,
+    memory=True
+)
+
+# 🛠️ Tarefas
+
+# 1️⃣ Pesquisa de Subtemas
+pesquisa_task = Task(
+    description=(
+        "Pesquisar na internet e identificar os 10 subtemas mais relevantes para o livro sobre {tema}."
+        " Criar um mapa conceitual conectando os subtemas."
+    ),
+    expected_output="Relatório detalhado com os 10 subtemas e um mapa conceitual.",
+    agent=pesquisador
+)
+
+# 2️⃣ Estruturação do Conteúdo
+estrutura_task = Task(
+    description=(
+        "Criar um esqueleto detalhado do livro com título e capítulos:"
+        "\n- Título principal"
+        "\n- 10 capítulos sequenciais"
+        "\n- Descrição de 1000-1500 palavras para cada capítulo"
+    ),
+    expected_output="Plano detalhado do livro com estrutura organizada.",
+    agent=planejador
+)
+
+# 3️⃣ Escrita do Livro
+escrita_task = Task(
+    description=(
+        "Escrever um livro mantendo foco nas temáticas seguindo o plano criado com base na estrutura definida seguindo "
+        "Cada capítulo deve ser escrito conforme a tecnica de cadeia de pensamentos "
+        "Cada capítulo deve obrigatóriamente possuir no mínimo 6500 palavras de argumentação, e deve conter:"
+        "\n- Introdução"
+        "\n- Desenvolvimento com no mínimo 5 seções"
+        "\n- Exemplos de codigo e prática de implementação"
+        "\n- Explicação para leigos no tema"
+        "\n- Conclusão conectando ao próximo capítulo"
+    ),
+    expected_output="Documento Markdown com o livro estruturado.",
+    agent=escritor,
+    output_file="livro_v6.md"
+    
+)
+
+# 🏗️ Criando a Equipe
+crew = Crew(
+    agents=[pesquisador, planejador, escritor],
+    tasks=[pesquisa_task, estrutura_task, escrita_task],
+    process=Process.sequential
+)
+
+# 🚀 Execução do Projeto
+if __name__ == "__main__":
+    tema = input("Digite o tema do livro: ")
+
+    print("\n🔍 Iniciando pesquisa sobre:", tema)
+    resultado = crew.kickoff(inputs={"tema": tema})
+
+
+
+    print("\n✅ Livro gerado com sucesso! Arquivo salvo como 'livro.md'.")
